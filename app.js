@@ -3,7 +3,7 @@ const express = require('express');
 const bodyParser=require('body-parser');
 const ejs = require('ejs');
 const mongoose=require('mongoose')
-
+var encrypt = require('mongoose-encryption');
 
 
 //define the app and the port 
@@ -22,6 +22,10 @@ const userSchema =new mongoose.Schema({
     email:String,
     password:String,
 });
+
+const secret ="thisIsOurLittleSecret."
+userSchema.plugin(encrypt, { secret: secret, encryptedFields: ['password']  });
+
 const User =mongoose.model('User', userSchema);  
 //the app routs 
 app.get('/', (req, res) => {
