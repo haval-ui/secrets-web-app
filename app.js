@@ -41,6 +41,7 @@ const userSchema =new mongoose.Schema({
     password:String,
     googleId:String,
     facebookId:String,
+    secret:String,
 });
 //set up and use passport & auth2.0 
 userSchema.plugin(passportLocalMongoose);
@@ -66,7 +67,6 @@ passport.use(new GoogleStrategy({
     userProfileURL:"https://www.googleapis.com/oauth2/v3/userinfo"
 },
     function(accessToken, refreshToken, profile, cb) {
-        console.log(profile);
     User.findOrCreate({ googleId: profile.id }, function (err, user,created) {
         return cb(err, user);
     });
@@ -84,7 +84,7 @@ passport.use(new FacebookStrategy({
     }
 ));
 
-//the hoem app routs 
+//the home app routs .
 app.get('/', (req, res) => {
     res.render("home");
 });
@@ -120,11 +120,15 @@ app.get('/register', (req, res) => {
 
 //secrets page rout 
 app.get('/secrets',(req,res)=>{
-    if(req.isAuthenticated()){
-        res.render("secrets");
-    }else{
-        res.redirect('/login');
-    }
+    User.find({"secret":{$ne:null}},(err,foundUsers)=>{
+        if(err){
+            console.log(err);
+        }else{
+            if (foundUsers){
+                res.render("secrets",{usersWithSecrets:foundUsers});
+            }
+        }
+    });
 });
 // functionality of the logout button and logout rout.
 app.get('/logout',(req,res)=>{
@@ -136,6 +140,31 @@ app.get('/logout',(req,res)=>{
         }
         });
 });
+
+//set up the submit rout.
+app.get('/submit',(req,res)=>{
+    if(req.isAuthenticated()){
+        res.render("submit");
+    }else{
+        res.redirect('/login');
+    }
+})
+//collect the data from the submit rout .
+app.post('/submit',(req,res)=>{
+    const submittedSecret= req.body.secret
+    User.findById(req.user.id,(err,foundUser)=>{
+        if(err){
+            console.log(err);
+        }else{
+            if(foundUser){
+                foundUser.secret = submittedSecret;
+                foundUser.save(()=>{
+                    res.redirect('/secrets');
+                });
+            }
+        }
+    });
+}); 
 // collect the send data from register rout and saving it to the db .
 app.post('/register', function (req, res) {
     User.register({username:req.body.username},req.body.password,(err,user)=>{
